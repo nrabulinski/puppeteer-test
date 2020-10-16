@@ -2,3 +2,5 @@ node_modules/
 
 # Screenshots the bot produces
 *.png
+
+.vscode/

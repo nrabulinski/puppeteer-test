@@ -19,36 +19,45 @@ module.exports = async (browser, fakeUserAgent) => {
             hasTouch: false
         };
     await page.setViewport(viewport);
-    await page.evaluateOnNewDocument(({ platform, productSub, vendor, oscpu, cpuClass }) => {
-        Object.defineProperty(navigator, 'platform', platform);
-        Object.defineProperty(navigator, 'productSub', productSub);
-        Object.defineProperty(navigator, 'vendor', vendor);
-        Object.defineProperty(navigator, 'oscpu', oscpu);
-        Object.defineProperty(navigator, 'cpuClass', cpuClass);
+    await page.evaluateOnNewDocument((platform, productSub, vendor, oscpu, cpuClass) => {
+        Object.defineProperty(navigator, 'platform', { get: () => platform });
+        Object.defineProperty(navigator, 'productSub', { get: () => productSub });
+        Object.defineProperty(navigator, 'vendor', { get: () => vendor });
+        Object.defineProperty(navigator, 'oscpu', { get: () => oscpu });
+        Object.defineProperty(navigator, 'cpuClass', { get: () => cpuClass });
         Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
         Object.defineProperty(navigator, 'plugins', { get: () => [] });
-    }, {
-        platform:
-            fakeUserAgent.OS === 'iOS' ? { get: () => 'iPhone' } :
-            fakeUserAgent.OS === 'Windows' ? { get: () => 'Win32' } :
-            fakeUserAgent.OS === 'Linux' ? { get: () => 'Linux x86_64' } :
-            fakeUserAgent.OS === 'macOS' ? { get: () => 'MacIntel' } :
-            { get: () => 'Win32' },
-        productSub:
-            fakeUserAgent.name.startsWith('Internet Explorer') ? { get: () => undefined } :
-            fakeUserAgent.name.startsWith('Firefox') ? { get: () => '20100101' } :
-            fakeUserAgent.name.startsWith('Chrome') ? { get: () => '20030107' } :
-            { get: () => '20030107' },
-        vendor:
-            fakeUserAgent.OS === 'iOS' ? { get: () => 'Apple Computer, Inc.' } :
-            fakeUserAgent.name.startsWith('Chrome') ? { get: () => 'Google Inc.' } :
-            { get: () => '' },
-        oscpu:
-            fakeUserAgent.name.startsWith('Firefox') ? { get: () => 'Windows NT 10.0; Win64; x64' } :
-            { get: () => undefined },
-        cpuClass:
-            fakeUserAgent.name.startsWith('Internet Explorer') ? { get: () => 'x86' } :
-            { get: () => undefined }
-    });
+        delete Object.getPrototypeOf(navigator).webdriver;
+    },
+        getPlatform(fakeUserAgent),
+        getProductSub(fakeUserAgent),
+        getVendor(fakeUserAgent),
+        getOsCpu(fakeUserAgent),
+        getCpuClass(fakeUserAgent)
+    );
     return page;
 };
+
+const getPlatform = ({ OS }) =>
+    OS === 'iOS' ? 'iPhone' :
+    OS === 'Linux' ? 'Linux x86_64' :
+    OS === 'macOS' ? 'MacIntel' :
+    'Win32';
+
+const getProductSub = ({ name }) =>
+    name.startsWith('Internet Explorer') ? undefined :
+    name.startsWith('Firefox') ? '20100101' :
+    '20030107';
+
+const getVendor = ({ OS, name }) =>
+    OS === 'iOS' ? 'Apple Computer, Inc.' :
+    name.startsWith('Chrome') ? 'Google Inc.' :
+    '';
+
+const getOsCpu = ({ name }) =>
+    name.startsWith('Firefox') ? 'Windows NT 10.0; Win64; x64' :
+    '';
+
+const getCpuClass = ({ name }) =>
+    name.startsWith('Internet Explorer') ? 'x86' :
+    undefined;
